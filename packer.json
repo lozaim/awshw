@@ -1,0 +1,30 @@
+{
+	"variables": {
+		"aws_access_key": "AKIAYJH5OR4LWEP5UB6U",
+		"aws_secret_key": "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"
+	},
+	"builders": [{
+		"type": "amazon-ebs",
+		"access_key": "AKIAYJH5OR4LWEP5UB6U",
+		"secret_key": "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",
+		"region": "us-east-2",
+		"vpc_id": "vpc-09d199cd581ee69c0",
+		"subnet_id": "subnet-0b8422843202049ec",
+		"associate_public_ip_address": "true",
+		"source_ami": "ami-05d72852800cbf29e",
+		"instance_type": "t2.micro",
+		"ssh_username": "ec2-user",
+		"ami_name": "packer-example [[timestamp]]"
+	}],
+	"provisioners": [
+		{
+			"type": "shell",
+			"inline": [
+				"sleep 30",
+				"sudo yum update -y",
+				"sudo yum install -y httpd.x86_64 jq",
+				"sudo systemctl enable httpd.service"
+				]
+		}
+	]
+}

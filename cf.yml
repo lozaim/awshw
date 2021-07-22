@@ -1,0 +1,25 @@
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-05d72852800cbf29e
+      InstanceType: t2.micro
+      IamInstanceProfile: EC2S3VPCFULL
+      SecurityGroupIds: [sg-03d6707092d93853b]
+      Tags:
+        - Key: Name
+          Value: tst-devops-01-ec2-01
+        - Key: env
+          Value: tst
+        - Key: client
+          Value: devops
+        - Key: index
+          Value: 01
+      KeyName: devops-aws-key  
+      UserData:
+        'Fn::Base64': 
+          !Sub |
+            #!/bin/bash
+            aws s3 sync s3://tst-devops-01-s3loz-01 /home/ec2-user
+            chmod +x /home/ec2-user/deploy.sh
+            sudo /home/ec2-user/deploy.sh

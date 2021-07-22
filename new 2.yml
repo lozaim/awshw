@@ -1,0 +1,35 @@
+Resources:
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow http to client host 
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        VpcId: vpc-0002d0b53ebc9e4a9
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-05d72852800cbf29e 
+      UserData:
+        'Fn::Base64': 
+          !Sub |
+            #!/bin/bash
+            aws s3 sync s3://devopsloz1 /home/ec2-user
+            chmod +x /home/ec2-user/deploy.sh
+            sudo /home/ec2-user/deploy.sh
+      SecurityGroups:
+        - !Ref EC2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: tst-devops-01-ec2-01
+        - Key: env
+          Value: tst
+        - Key: client
+          Value: devops
+        - Key: index
+          Value: 01
+      KeyName: devops-aws-key  

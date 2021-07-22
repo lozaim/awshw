@@ -1,0 +1,488 @@
+Description: "Network: VPC, Subnets, RouteTables, Internet Gateway, NAT Gateways"
+
+Metadata:
+ AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Main parameters"
+        Parameters: 
+          - Environment
+          - ClientName
+          - Index         
+      -
+        Label:
+          default: "Network Configuration"
+        Parameters:
+          - VPCBlock
+          - PublicSubnet01CIDR
+          - PublicSubnet02CIDR
+          - PrivateSubnet01CIDR
+          - PrivateSubnet02CIDR
+          - DatabaseSubnet01CIDR
+          - DatabaseSubnet02CIDR
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'poc'
+    Description: Environment name, i.e. prod/stg/dev/tst/poc/qa
+
+  ClientName:
+    Type: String
+    Description: Client name
+
+  Index:
+    Type: String
+    Default: '01'
+    Description: Index
+
+  VPCBlock:
+    Type: String
+    Default: '10.20.0.0/21'
+  
+  PublicSubnet01CIDR: 
+    Type: String
+    Default: '10.20.0.0/24'
+    Description: "Public Subnet-01 CIDR"
+
+  PublicSubnet02CIDR: 
+    Type: String
+    Default: '10.20.1.0/24'
+    Description: "Public Subnet-02 CIDR"
+  
+  PrivateSubnet01CIDR: 
+    Type: String
+    Default: '10.20.2.0/24'
+    Description: "Private Subnet-01 CIDR"
+    
+  PrivateSubnet02CIDR: 
+    Type: String
+    Default: '10.20.3.0/24'
+    Description: "Public Subnet-02 CIDR"
+
+  DatabaseSubnet01CIDR: 
+    Type: String
+    Default: '10.20.4.0/24'
+    Description: "Database Subnet-01 CIDR"
+    
+  DatabaseSubnet02CIDR: 
+    Type: String
+    Default: '10.20.5.0/24'
+    Description: "Database Subnet-02 CIDR"    
+
+
+Resources:
+#============= VPC ==================
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:                              
+      CidrBlock: !Ref VPCBlock             
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "vpc", "01" ]]    
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+       
+         
+          
+#====== Internet Gateway =======
+  GatewayInternet:
+    Type: "AWS::EC2::InternetGateway"
+    Properties: 
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "igw", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+
+
+  GatewayAttachmentInternet:                       # Attachment IGW to VPC
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref GatewayInternet
+ 
+ 
+ 
+ 
+ 
+#====== Public RouteTables =========	  
+  RouteTableForPublicSubnet:                       # Creation of Empty Route Table
+    Type: "AWS::EC2::RouteTable"                    
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "publicrt", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+
+
+          
+  RoutesForPublicRouteTable:                     # Creation and Attachment of Routes for Route Table
+    Type: "AWS::EC2::Route"
+    DependsOn: GatewayAttachmentInternet
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref GatewayInternet
+      RouteTableId: !Ref RouteTableForPublicSubnet
+          
+        
+ 
+#====== Private RouteTables ===========
+  RouteTableForPrivateSubnet01:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "privatert", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+          
+  RouteTableForPrivateSubnet02:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "privatert", "02" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+
+#======= Routes for Private Subnet RouteTables using NAT
+  RoutesForPrivateRouteTableA:
+    Type: AWS::EC2::Route
+    DependsOn: NATGateway01
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref RouteTableForPrivateSubnet01
+      NatGatewayId: !Ref NATGateway01
+    
+  RoutesForPrivateRouteTableB:
+    Type: AWS::EC2::Route
+    DependsOn: NATGateway02
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref RouteTableForPrivateSubnet02
+      NatGatewayId: !Ref NATGateway02
+
+    
+#====== Associate Public Route for Public Subnets    
+  RouteAssociationPublic01:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTableForPublicSubnet
+      SubnetId: !Ref PublicSubnet01
+    
+  RouteAssociationPublic02:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTableForPublicSubnet
+      SubnetId: !Ref PublicSubnet02
+    
+    
+#===== Associate Private Route for Private Subnets    
+    
+  RouteAssociationPrivate01:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTableForPrivateSubnet01
+      SubnetId: !Ref PrivateSubnet01
+    
+  RouteAssociationPrivate02:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTableForPrivateSubnet02
+      SubnetId: !Ref PrivateSubnet02
+       
+#==== Route Table and Route Association for Internal only - Databases
+
+  RouteTableForDatabase:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "dbrt", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+  RouteAssociationDatabaseA:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTableForDatabase
+      SubnetId: !Ref DatabaseSubnet01
+ 
+  RouteAssociationDatabaseB:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref RouteTableForDatabase
+      SubnetId: !Ref DatabaseSubnet02
+   
+    
+ #======= ElasticIP for NAT Gateways ======
+ 
+  EIP01:
+    Type: "AWS::EC2::EIP"
+    DependsOn : GatewayAttachmentInternet
+    Properties:
+      Domain: !Ref VPC
+
+  EIP02:
+    Type: "AWS::EC2::EIP"
+    DependsOn : GatewayAttachmentInternet
+    Properties:
+      Domain: !Ref VPC
+ 
+#========= NAT Gateways ===============	  	  
+
+
+  NATGateway01:
+    DependsOn: GatewayAttachmentInternet
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet01
+      AllocationId:  !GetAtt EIP01.AllocationId    
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "natgw", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+  
+  NATGateway02:
+    DependsOn: GatewayAttachmentInternet
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet02
+      AllocationId:  !GetAtt EIP02.AllocationId
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "natgw", "02" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+          
+          
+#============ ALL Subnets ======================================================	  
+  PublicSubnet01:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, "Fn::GetAZs": { Ref: "AWS::Region" } ]
+      CidrBlock: !Ref "PublicSubnet01CIDR"
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "publicsubnet", "02" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+        
+  PublicSubnet02:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, "Fn::GetAZs": { Ref: "AWS::Region" } ]
+      CidrBlock: !Ref "PublicSubnet02CIDR"
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "privatesubnet", "02" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+
+  PrivateSubnet01:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, "Fn::GetAZs": { Ref: "AWS::Region" } ]
+      CidrBlock: !Ref "PrivateSubnet01CIDR"
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "privatesubnet", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+
+  PrivateSubnet02:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, "Fn::GetAZs": { Ref: "AWS::Region" } ]
+      CidrBlock: !Ref "PrivateSubnet02CIDR"
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "privatesubnet", "02" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+
+  DatabaseSubnet01:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, "Fn::GetAZs": { Ref: "AWS::Region" } ]
+      CidrBlock: !Ref "DatabaseSubnet01CIDR"
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "dbsubnet", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+
+  DatabaseSubnet02:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, "Fn::GetAZs": { Ref: "AWS::Region" } ]
+      CidrBlock: !Ref "DatabaseSubnet02CIDR"
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "dbsubnet", "02" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]
+        
+#=====SSN=====
+  SSMOutputPublickSubnet:
+    Type: "AWS::SSM::Parameter"  
+    Properties:
+      Description: PublicSubnet01
+      Name: 'public_subnet_01'
+      Type: String
+      Value: !Ref PublicSubnet01      
+
+#=================== OUTPUTS ===========================
+Outputs:
+  VPC:
+    Description: ID for the VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "vpc", "01" ]]
+
+  VPCBlock:
+    Description: Primary CIDR block for the VPC
+    Value: !GetAtt VPC.CidrBlock
+    Export:
+      Name: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "cidr", "01" ]]
+      
+  PublicSubnet01:
+    Description: ID for Public Subnet 01 
+    Value: !Ref PublicSubnet01
+    Export:
+      Name: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "publicsubnet", "01" ]]
+
+  PublicSubnet02:
+    Description: ID for Public Subnet 02 
+    Value: !Ref PublicSubnet02
+    Export:
+      Name: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "publicsubnet", "02" ]]
+
+  PrivateSubnet01:
+    Description: ID for Private Subnet 01 
+    Value: !Ref PrivateSubnet01
+    Export:
+      Name: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "privatesubnet", "01" ]]
+
+  PrivateSubnet02:
+    Description: ID for Private Subnet 02 
+    Value: !Ref PrivateSubnet02
+    Export:
+      Name: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "privatesubnet", "02" ]]
+
+  DatabaseSubnet01:
+    Description: ID for Database Subnet 01 
+    Value: !Ref DatabaseSubnet01
+    Export:
+      Name: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "dbsubnet", "01" ]]
+
+  DatabaseSubnet02:
+    Description: ID for Database Subnet 02
+    Value: !Ref DatabaseSubnet02
+    Export:
+      Name: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "dbsubnet", "02" ]]

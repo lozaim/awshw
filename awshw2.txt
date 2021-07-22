@@ -1,0 +1,30 @@
+1. Создать с помощью packer образ со следующими условиями:
+   при создании ec2 с этого образа будет на 80 порту запущен веб сервер и можно будет увидеть следующую информацию
+     а)имя ОС этого образа
+     б)будет выведено дату создания данного образа
+	 
+	 ec2_image.json
+	 name_date.sh
+	 
+2. С помощью cloudformation создать EC2 с образом созданым в п.1, проверить что пункт 1 выполнен правильно
+
+	aws cloudformation create-stack --stack-name poc-devops-01-ec2 --template-body file://ec2_1.yml --capabilities CAPABILITY_NAMED_IAM
+
+3. С помощью cloudformation создать SNS topic и subscription с Вашим email. Email должен передаваться параметром.
+
+	aws cloudformation create-stack --stack-name poc-devops-01-sns --template-body file://sns_cf.yml --capabilities CAPABILITY_NAMED_IAM
+
+4. Создать s3 бакет и настроить уведомления на Ваш email при созании/удалении объекта в бакете
+
+		aws cloudformation create-stack --stack-name poc-devops-01-s3sns --template-body file://s3_sns.yml --capabilities CAPABILITY_NAMED_IAM
+
+5*) Написать скрипт на bash/powershell/чем угодно который выполнит 1 пункт и положит AMI ID в SSM параметр
+
+	sudo aws s3 cp s3://poc-devops-01-s3loz-01/script.sh /tmp/ && sudo chmod a+x /tmp/script.sh && sudo /tmp/script.sh
+
+6**) Пункт 4- уведомления на telegram или любой другой мессенджер (используя AWS Lambda)
+
+
+ 
+	
+

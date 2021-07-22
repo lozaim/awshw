@@ -1,0 +1,87 @@
+Description: "EC2: Instance, Security group"
+Parameters:
+  SubnetIds:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: 'public_subnet_01'
+    Description: Public subnet
+  Environment:
+    Type: String
+    Default: 'poc'
+    Description: Environment name
+  ClientName:
+    Type: String
+    Default: 'devops'
+    Description: Client name
+  Index:
+    Type: String
+    Default: '01'
+    Description: Index
+  AMI:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: 'AMI_DEV_TST'
+    Description: AMI  
+  InstanceTypeParameter:
+    Type: String
+    Default: 't2.micro'
+    Description: Enter instance size.
+  Key:
+    Type: String
+    Default: 'devops-aws-key'
+    Description: The key used to access the instance.
+
+Resources:  
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow ssh and http to client host 
+        VpcId: 
+          Fn::ImportValue: !Join ['-',[!Ref Environment, !Ref ClientName, !Ref Index, "vpc", "01"]]
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0          
+        
+        
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceTypeParameter
+      KeyName: !Ref Key 
+      IamInstanceProfile: EC2S3VPCFULL
+      SubnetId: !Ref SubnetIds
+      SecurityGroupIds: 
+        - !Ref EC2SecurityGroup
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "ec2", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+      - Key: "Description"
+        Value:  !Join ['', ["Created by CloudFormation Stack ", !Ref "AWS::StackName" ]]    
+      UserData:
+        'Fn::Base64': 
+          !Sub |
+            #!/bin/bash
+            aws s3 sync s3://tst-devops-01-s3loz-01 /home/ec2-user
+            chmod +x /home/ec2-user/deploy.sh
+            sudo /home/ec2-user/deploy.sh
+Outputs:
+  PublicIp:
+    Value:
+      Fn::GetAtt:
+        - EC2Instance
+        - PublicIp
+    Description: Server's PublicIp Address            

@@ -1,0 +1,20 @@
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: tst-devops-01-s3loz-02
+      ObjectLockEnabled: False
+      PublicAccessBlockConfiguration: 
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      Tags:
+      - Key: "Name"
+        Value: "tst-devops-01-s3loz-01"
+      - Key: "env"
+        Value: "tst"
+      - Key: "client"
+        Value: "devops"
+      - Key: "index"
+        Value: "01"

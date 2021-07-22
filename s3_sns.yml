@@ -1,0 +1,70 @@
+Description: "Creates s3 bucket"
+Parameters:
+  Environment:
+    Type: String
+    Default: 'poc'
+    Description: Environment name
+  ClientName:
+    Type: String
+    Default: 'devops'
+    Description: Client name
+  Index:
+    Type: String
+    Default: '01'
+    Description: Index
+  MyEmail:
+    Type: String
+    Default: 'vdv2013@gmail.com'
+    Description: My email for subscription
+  BucketName:
+    Type: String
+    Default: poc-devops-01-s3loz-02
+    Description: s3 bucket name
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "s3loz", "02" ]]
+      ObjectLockEnabled: False
+      AccessControl: Private
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Topic: !Ref MySNSTopic
+            Event: 's3:ObjectCreated:*'
+          - Topic: !Ref MySNSTopic
+            Event: 's3:ObjectRemoved:*'   
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "s3loz", "02" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index
+  MySNSTopic:
+    Type: AWS::SNS::Topic
+  MySubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref MyEmail
+      Protocol: email
+      TopicArn: !Ref MySNSTopic
+  MySNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: S3Bucketpolicy
+        Statement: 
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action:
+              - 'SNS:Publish'
+            Resource: '*'
+            Condition:
+              ArnLike:
+                'aws:SourceArn': arn:aws:s3:*:*:poc-devops-01-s3loz-02
+      Topics:
+        - !Ref MySNSTopic
+

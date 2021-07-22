@@ -1,0 +1,16 @@
+Description: "Creates SNS Topoc and Subscription"
+Parameters:
+  MyEmail:
+    Type: String
+    Default: 'vdv2013@gmail.com'
+    Description: My email for subscription
+Resources: 
+  MySNSTopic:
+    Type: AWS::SNS::Topic
+  MySubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref MyEmail
+      Protocol: email
+      TopicArn: !Ref MySNSTopic
+

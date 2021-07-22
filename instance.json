@@ -1,0 +1,15 @@
+"MyEC2Instance" : {
+	"Type" : "AWS::EC2::Instance",
+	"Properties" : {
+		"ImageId" : { "ami-05d72852800cbf29e"}, 
+		"Instance-Type" : {"t2.micro"},
+		"IamInstanceProfile" : {"S3RWLT"}, 
+		"SecurityGroups" : {"launch-wizard-4"}, 
+		"KeyName" : {"devops-aws-key"},
+		"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+			"#!/bin/bash\n"
+			"aws s3 sync s3://devopsloz1 /home/ec2-user\n"
+			"chmod +x /home/ec2-user/deploy.sh\n"
+			"sudo /home/ec2-user/deploy.sh\n",
+    ]]}}}
+}

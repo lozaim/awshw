@@ -1,0 +1,25 @@
+aws s3api create-bucket --bucket devopsloz1 --acl private --region us-east-2 --create-bucket-configuration LocationConstraint=us-east-2
+aws s3api put-public-access-block --bucket devopsloz1 --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+aws s3api create-bucket --bucket devopsloz2 --acl private --region us-east-2 --create-bucket-configuration LocationConstraint=us-east-2
+aws s3api put-public-access-block --bucket devopsloz2 --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+aws s3 mb s3://devopsloz3
+
+aws s3 cp C:\Users\V\deploy.sh s3://devopsloz1
+
+aws ec2 run-instances --image-id ami-05d72852800cbf29e --instance-type t2.micro --iam-instance-profile Name="S3RWLT"  --security-groups launch-wizard-4 --key-name devops-aws-key  --user-data file://instance.sh
+
+
+aws cloudformation create-stack --stack-name poc-devops-01-vpc --template-body file://vpc.yml --parameters file://vpc_parameters.json --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --stack-name poc-devops-01-ec2 --template-body file://ec2.yml --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation delete-stack --stack-name poc-devops-01-ec2  
+aws s3 cp /home/ec2-user/deploy.sh s3://tst-devops-01-s3loz-01/deploy.sh
+
+
+
+aws s3 cp ec2_image.json s3://poc-devops-01-s3loz-01
+aws s3 cp name_date.sh s3://poc-devops-01-s3loz-01
+		
+sudo aws s3 cp s3://poc-devops-01-s3loz-01/script.sh /tmp/ && sudo chmod a+x /tmp/script.sh && sudo /tmp/script.sh		
+sudo aws s3 cp s3://tst-devops-01-s3loz-01/deploy_with_packer.sh /tmp/ && sudo chmod a+x /tmp/deploy_with_packer.sh && sudo /tmp/deploy_with_packer.sh

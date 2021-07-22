@@ -1,0 +1,34 @@
+Description: "Creates s3 bucket"
+Parameters:
+  Environment:
+    Type: String
+    Default: 'poc'
+    Description: Environment name
+  ClientName:
+    Type: String
+    Default: 'devops'
+    Description: Client name
+  Index:
+    Type: String
+    Default: '01'
+    Description: Index
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "s3loz", "01" ]]
+      ObjectLockEnabled: False
+      PublicAccessBlockConfiguration: 
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "s3loz", "01" ]]
+      - Key: env
+        Value:  !Ref Environment
+      - Key: client
+        Value:  !Ref ClientName
+      - Key: index
+        Value:  !Ref Index

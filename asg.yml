@@ -1,0 +1,113 @@
+Description: "Creates ASG with Specified Min, Max, and desired capacity"
+Parameters:
+  Environment:
+    Type: String
+    Default: 'poc'
+    Description: Environment name, i.e. prod/stg/dev/tst/poc/qa
+  ClientName:
+    Type: String
+    Default: 'devops'
+    Description: Client name
+  Index:
+    Type: String
+    Default: '01'
+    Description: Index
+  MaxSizeASG: 
+    Description: "Enter the Max Size for the ASG"
+    Type: String
+    Default: '1'
+  MinSizeASG:
+    Description: "Enter the Min Size for the ASG"
+    Type: String
+    Default: '1'
+  DesiredCapacityASG:
+    Description: "Enter the desired capacity for the ASG"
+    Type: String
+    Default: '1'
+  VPCZoneIdentifier:
+    Description: "List the Subnet Ids of the instances"
+    Type: List<AWS::EC2::Subnet::Id>
+    Default: 'subnet-0b8422843202049ec,subnet-0b4b2d16deaa48f0a'
+    
+  KeyName:
+    Description: "EC2 instance key name"
+    Type: String
+    Default: 'devops-aws-key'
+  InstanceType:
+    Description: "EC2 instance type"
+    Type: String
+    Default: 't2.micro'    
+
+Mappings: 
+  RegionMap: 
+    us-east-2: 
+      AMI: "ami-05d72852800cbf29e"
+
+Resources: 
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow ssh and http to client host 
+        VpcId: !ImportValue poc-devops-01-vpc-01
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0          
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: tst-devops-01-awg-01
+      Cooldown: 120
+      DesiredCapacity:
+        Ref: DesiredCapacityASG
+      LaunchConfigurationName: !Ref LaunchConfig 
+      MaxSize:
+        Ref: MaxSizeASG
+      MinSize:
+        Ref: MinSizeASG
+      Tags:
+      - Key: Name
+        Value:  !Join ['-', [!Ref Environment, !Ref ClientName, !Ref Index, "asg", "01" ]]
+        PropagateAtLaunch: 'true'
+      - Key: env
+        Value:  !Ref Environment
+        PropagateAtLaunch: 'true'
+      - Key: client
+        Value:  !Ref ClientName
+        PropagateAtLaunch: 'true'
+      - Key: index
+        Value:  !Ref Index
+        PropagateAtLaunch: 'true'
+      VPCZoneIdentifier:
+        Ref: VPCZoneIdentifier
+     
+  LaunchConfig: 
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties: 
+      KeyName: 
+        Ref: KeyName
+      ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", AMI ]
+      SecurityGroups: 
+        - Ref: "EC2SecurityGroup"
+      InstanceType: 
+        Ref: "InstanceType"
+      LaunchConfigurationName: TSTLaunchConfiguration  
+
+Outputs: 
+  AutoscalingGroup: 
+    Description: "The newly created asg"
+    Value: 
+      Ref: "AutoScalingGroup"
+  LaunchConfig:
+    Description: "the newly created launch config"
+    Value:
+      Ref: "LaunchConfig"

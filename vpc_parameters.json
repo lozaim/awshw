@@ -1,0 +1,43 @@
+[ 
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "poc"
+  },
+  {
+    "ParameterKey": "ClientName",
+    "ParameterValue": "devops"
+  }, 
+  {
+    "ParameterKey": "Index",
+    "ParameterValue": "01"
+  },		
+  {
+    "ParameterKey": "VPCBlock",
+    "ParameterValue": "10.20.0.0/21"
+  },
+  {
+    "ParameterKey": "PublicSubnet01CIDR",
+    "ParameterValue": "10.20.0.0/24"
+  }, 
+  {
+    "ParameterKey": "PublicSubnet02CIDR",
+    "ParameterValue": "10.20.1.0/24"
+  },
+  {
+    "ParameterKey": "PrivateSubnet01CIDR",
+    "ParameterValue": "10.20.2.0/24"
+  }, 
+  {
+    "ParameterKey": "PrivateSubnet02CIDR",
+    "ParameterValue": "10.20.3.0/24"
+  },
+  {
+    "ParameterKey": "DatabaseSubnet01CIDR",
+    "ParameterValue": "10.20.4.0/24"
+  }, 
+  {
+    "ParameterKey": "DatabaseSubnet02CIDR",
+    "ParameterValue": "10.20.5.0/24"
+  }	
+]
+
